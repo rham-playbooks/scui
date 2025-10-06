@@ -125,3 +125,47 @@ curl -X POST http://localhost:8080/api/controller/ui/home \
 
 - The bearer token is stored as a container environment variable and only used server-side. Do not hardcode it in frontend files.
 - Restrict network egress from the container to your AAP instance as needed.
+
+## Media assets (videos and audio)
+
+This repo ignores large media in git by default (.mp4/.mp3). Place your files locally in the following structure so the app can find them. The scenario key used in `index.html` (the `data-scenario` attribute) must match the directory name.
+
+### Structure
+- Base paths:
+  - Videos: `assets/video/scenarios/<scenario>/<stage>/<stage>.mp4`
+  - Audio: `assets/audio/<scenario>/<stage>/<stage>.mp3`
+- Supported stages: `initiation`, `runtime`, `resolved`
+- Home background audio (looped on the home screen):
+  - `assets/audio/sc_home_background.mp3`
+
+Example (engine_failure scenario):
+```
+assets/
+  video/
+    home.mp4
+    scenarios/
+      engine_failure/
+        initiation/initiation.mp4
+        runtime/runtime.mp4
+        resolved/resolved.mp4
+  audio/
+    sc_home_background.mp3
+    engine_failure/
+      initiation/initiation.mp3
+      runtime/runtime.mp3
+      resolved/resolved.mp3
+```
+
+### Wiring a scenario button
+- In `index.html`, add or edit a button with `data-scenario` set to your scenario key:
+```
+<button data-video="assets/video/home.mp4" data-scenario="engine_failure" class="change-video">Engine Failure</button>
+```
+- Behavior:
+  - Click: plays `initiation` once, then `runtime` (audio and video).
+  - API resolve: plays `resolved` once, then returns to home.
+
+### Notes
+- The app will return 404 if a required file is missing; check your browser Network tab.
+- Git ignores media by default. Keep placeholder files (e.g., `.gitkeep`) if you want the empty directories tracked.
+- When building an image, the media under `assets/` is copied into `/usr/share/nginx/html/assets/` by the Containerfile.
