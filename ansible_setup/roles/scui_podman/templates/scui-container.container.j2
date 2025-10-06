@@ -1,0 +1,23 @@
+[Unit]
+Description=SCUI nginx container
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image={{ (image_ref | length > 0) | ternary(image_ref, image_name) }}
+Name={{ container_name }}
+PublishPort={{ host_http_port }}:80
+PublishPort={{ host_https_port }}:443
+Restart=always
+Env=AAP_BASE_URL={{ aap_base_url | default('') }}
+Env=AAP_BEARER_TOKEN={{ aap_bearer_token | default('') }}
+Env=API_CLIENT_BEARER_TOKEN={{ api_client_bearer_token | default('') }}
+LogDriver=k8s-file
+LogOpts=max-size=10m,max-file=5
+Volume={{ tls_cert_src }}:/etc/ssl/certs/site.crt:ro
+Volume={{ tls_key_src }}:/etc/ssl/private/site.key:ro
+
+[Install]
+WantedBy=multi-user.target
+
+

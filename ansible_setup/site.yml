@@ -1,0 +1,13 @@
+---
+- name: Deploy SCUI static site with Podman
+  hosts: sc_spaceship_screen
+  become: true
+  vars_files:
+    - vault.yml
+  vars:
+    image_ref: quay.io/crenwick93/scui-site:dev-amd64-v3
+    deployment_mode: quadlet
+    host_http_port: 80
+    aap_base_url: https://aap.scdemo.rham.dev/api/controller/v2/
+  roles:
+    - scui_podman

@@ -1,0 +1,144 @@
+header {
+	background: transparent;
+	padding: 0;
+	position: relative;
+}
+
+.nav-wrapper {
+	background: transparent;
+	display: flex;
+	justify-content: center;
+	align-items: flex-end;
+	height: 100vh;
+	margin: 0 auto;
+	overflow-y: hidden;
+	padding: 0;
+	position: absolute;
+	top: 0;
+	left: 0;	
+	width: 100%;
+	transition: all 0.2s ease;
+	z-index: 99;
+	
+	@supports (height: 100svh) {
+		height: 100svh;
+	}	
+	
+	.nav-wrap {
+		background: rgba($white, 0.5);
+		border-radius: 30px;
+		box-shadow: $boxshadow;
+		backdrop-filter: blur(30px);
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		height: auto;
+		max-height: 80px;	
+		margin: 0 auto 20px;
+		min-width: 600px;
+		padding: $padding;
+		width: auto;
+		transition: all 0.2s ease;
+		z-index: 9999;
+		animation: fadeUp 0.5s ease 0.2s both;
+		
+		@media #{$mbp} {
+			margin-bottom: $padding*2;
+			padding: 20px;
+		}		
+		
+		@media #{$lbp} {
+			margin-bottom: 40px;
+		}
+		
+		@media #{$xlbp} {
+			//margin-bottom: 50px;
+		}									
+	}
+	
+	.auto-wrap {
+		display: none;
+		position: absolute;
+		right: 20px;
+		bottom: 20px;
+		
+		@media #{$mbp} {
+			right: $padding*2;
+			bottom: $padding*2;
+		}		
+		
+		@media #{$lbp} {
+			display: block;
+			right: 40px;
+			bottom: 40px;
+		}		
+	}
+}
+
+button {
+	background-color: rgba($white, 0.8);
+	border: 1px solid rgba($white, 0);
+	border-radius: 15px;
+	box-shadow: 0px 4px 8px rgba($black, 0.01);
+	display: block;
+	font-family: $fontStack;
+	font-size: 13px;
+	font-weight: 400;
+	height: 40px;
+	line-height: 1;
+	margin: 0 4px;
+	padding: 0;
+	position: relative;
+	text-align: center;
+	width: 120px;
+	-webkit-appearance: none;
+	outline: none;
+	transition: all 0.3s ease;
+	animation: fadeUp 0.5s ease 0.3s both;
+	
+	@media #{$mbp} {
+		margin: 0 6px;
+	}
+	
+	&:nth-child(2) {
+		animation-delay: 0.4s;
+	}
+	
+	&:nth-child(3) {
+		animation-delay: 0.5s;
+	}
+	
+	&:nth-child(4) {
+		animation-delay: 0.6s;
+	}
+	
+	&:nth-child(5) {
+		animation-delay: 0.7s;
+	}
+	
+	&:nth-child(6) {
+		animation-delay: 0.8s;
+	}				
+	
+	&:hover {
+		background-color: rgba($white, 1);
+		border-color: rgba($black, 0.05);
+		box-shadow: 0px 4px 8px rgba($black, 0.08);
+	}
+	
+	&.active {
+		background-color: $red;
+		box-shadow: $boxshadow;
+		color: $white;
+		font-weight: 500;
+	}
+	
+	&.auto-video {
+		background-image: url('../img/autoplay.svg');
+        background-position: center center;
+        background-repeat: no-repeat;
+        background-size: 16px 16px;
+        margin: 0;
+        width: 40px;
+	}
+}

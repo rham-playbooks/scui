@@ -1,0 +1,88 @@
+server {
+    listen 80;
+    server_name _;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name _;
+
+    ssl_certificate /etc/ssl/certs/site.crt;
+    ssl_certificate_key /etc/ssl/private/site.key;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers on;
+    add_header Strict-Transport-Security "max-age=31536000" always;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Use standard MIME types so .html is served as text/html
+    include /etc/nginx/mime.types;
+
+    # Log to stdout/stderr so the container runtime can rotate
+    access_log /dev/stdout;
+    error_log  /dev/stderr warn;
+
+    # DNS resolver needed for dynamic proxy_pass with variables (captures)
+    resolver 1.1.1.1 8.8.8.8 ipv6=off valid=300s;
+
+    # Static site
+    location / {
+        try_files $uri $uri/ =404;
+    }
+
+    # Reverse proxy to Ansible Automation Platform (AAP)
+    # Expect envsubst to replace ${AAP_BASE_URL} and ${AAP_BEARER_TOKEN} at container start.
+    # AAP_BASE_URL should include the full API base and end with a slash, e.g.:
+    #   https://aap.example.com/api/controller/v2/
+    location ~ ^/api/controller/aap/launch/(\d+)/?$ {
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Bearer token injected via environment variable
+        proxy_set_header Authorization "Bearer ${AAP_BEARER_TOKEN}";
+
+        proxy_ssl_server_name on;
+
+        # Map to AAP launch endpoint for the captured Job Template ID
+        # ${AAP_BASE_URL} already includes controller path and ends with '/'
+        proxy_pass ${AAP_BASE_URL}job_templates/$1/launch/;
+    }
+
+    # UI control - Server-Sent Events stream
+    location /api/controller/ui/events {
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffering off;
+        proxy_read_timeout 1h;
+        proxy_pass http://127.0.0.1:3000/events;
+    }
+
+    # UI control - trigger Home
+    location = /api/controller/ui/home {
+        # Only allow POST
+        if ($request_method != POST) { return 405; }
+        # API bearer check
+        if ($http_authorization = "") { return 401; }
+        if ($http_authorization != "Bearer ${API_CLIENT_BEARER_TOKEN}") { return 401; }
+
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_pass http://127.0.0.1:3000/home;
+    }
+
+    gzip on;
+    gzip_types text/plain text/css application/javascript application/json image/svg+xml;
+}
+
+

@@ -1,0 +1,16 @@
+---
+galaxy_info:
+  author: scui
+  description: Install Podman and deploy nginx container for static site
+  license: MIT
+  min_ansible_version: "2.13"
+  platforms:
+    - name: EL
+      versions: ["8", "9"]
+    - name: Debian
+      versions: ["11", "12"]
+    - name: Ubuntu
+      versions: ["20.04", "22.04", "24.04"]
+dependencies: []
+
+

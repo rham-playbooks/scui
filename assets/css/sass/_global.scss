@@ -1,0 +1,38 @@
+// fonts
+@font-face {
+    font-family: 'Red Hat Display';
+    src: url('../fonts/redhatdisplay-regular.woff2') format('woff2'),
+    	 url('../fonts/redhatdisplay-regular.woff') format('woff');
+    font-weight: 400;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Red Hat Display';
+    src: url('../fonts/redhatdisplay-medium.woff2') format('woff2'),
+    	 url('../fonts/redhatdisplay-medium.woff') format('woff');
+    font-weight: 500;
+    font-style: normal;
+}
+
+$fontStack: 'Red Hat Display', Helvetica, sans-serif; // Regular 400, Medium 500
+$fontNorm: Arial, Helvetica, sans-serif;
+
+// colours
+$black: #000;
+$white: #fff;
+$red: #ee0000;
+
+// layout
+$padding: 15px;
+$border: 1px solid $black;
+$boxshadow: 0px 4px 8px rgba($black, 0.05);
+
+// breakpoints
+$xsbp: "screen and (min-width: 390px)";
+$sbp: "screen and (min-width: 500px)";
+$mbp: "screen and (min-width: 768px)";
+$lbp: "screen and (min-width: 990px)";
+$xbp: "screen and (min-width: 1140px)";
+$xlbp: "screen and (min-width: 1340px)";
+$xxlbp: "screen and (min-width: 1440px)";
