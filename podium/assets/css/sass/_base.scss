@@ -1,0 +1,160 @@
+*, body, html {
+	box-sizing: border-box;
+}
+
+body {
+	background-color: $white;
+	font-family: $fontStack;
+}
+
+.page-container {
+	display: flex;
+	flex-direction: column;
+	min-height: 100vh;
+		
+	main {
+		flex: 1;
+	}
+}
+
+.container {
+	padding-left: 20px;
+	padding-right: 20px;
+	position: relative;
+	margin: 0 auto;
+	max-width: 1200px;
+	width: 100%;
+	
+	@media #{$lbp} {
+		padding-left: $padding*2;
+		padding-right: $padding*2;
+	}	
+	
+	&.full {
+		padding: 0;
+		max-width: 100%;
+	}
+	
+	&.max {
+		max-width: 1680px;
+	}
+
+	&.wide {
+		max-width: 1440px;
+	}
+	
+	&.narrow {
+		max-width: 1080px;
+	}
+	
+	&.slim {
+		max-width: 800px;
+	}
+	
+	&.center {
+		text-align: center;
+	}	
+}
+
+h1, h2, h3, h4, h5 {
+	color: $black;
+	font-family: $fontStack;
+	font-size: 20px;
+	font-weight: 500;
+	letter-spacing: 0;
+	line-height: 1.1;
+	margin: 0;
+	margin-bottom: 10px;
+	padding: 0;
+	
+	@media #{$mbp} {
+		font-size: 24px;
+	}
+	
+	@media #{$lbp} {
+		margin-bottom: $padding;
+	}
+	
+	&.light {
+		font-weight: 400;
+	}
+}
+
+a {
+	color: $black;
+	text-decoration: underline;
+	transition: all 0.3s ease;
+
+	&:hover {
+		opacity: 0.6;
+    	text-decoration: none;
+	}
+	
+	&:focus {
+		outline: none;
+	}
+}
+
+p,
+ul li,
+ol li {
+	color: $black;	
+	font-size: 16px;
+	font-weight: 400;
+	line-height: 1.5em;
+	margin-bottom: $padding;		
+}
+
+p {
+	
+	&:last-of-type {
+		margin-bottom: 0;
+	}
+}
+
+strong {
+	font-weight: 500;
+}
+
+.media-bg {
+    height: 100vh;
+    max-height: 100vh;
+    margin: 0;
+    overflow: hidden;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    animation: fadeIn 0.5s ease 0.1s both;
+    
+	@supports (height: 100svh) {
+		height: 100svh;
+	}    
+}
+
+.video-wrapper {
+	height: 100%;
+	margin: 0 auto;
+	max-width: 100%;		
+	overflow: hidden;	
+	padding-bottom: 56.25%;
+	position: absolute; 
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	width: 100%;
+	z-index: 0;
+	
+	iframe,
+	.background-video {
+		height: 100%;
+		position: absolute;		
+		top: 50%; 
+		left: 50%; 
+		transform: translate(-50%, -50%);	
+		min-width: 177.77vh;
+		object-fit: cover;
+		pointer-events: none;
+		width: 100%;		
+	}		  	
+}

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="x-ua-compatible" content="ie=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<link rel="icon" type="image/png" href="assets/img/favicon.png">
+<title>Summit Connect 2025</title>
+<link rel="stylesheet" href="assets/css/style.css?ver=1.1">
+</head>
+
+<body>
+	<div id="page-container" class="page-container">		
+		<header>
+		</header>
+
+		<div class="media-bg">
+			<div class="video-wrapper">
+				<video id="backgroundVideo" autoplay loop muted playsinline class="background-video">
+	            	<source id="videoSource" src="assets/video/home.mp4" type="video/mp4">
+				</video>
+			</div>
+		</div>
+
+		<div class="nav-wrapper">				
+			<div class="nav-wrap">
+			    <button type="button" data-video="assets/video/engine_failure.mov" data-scenario="engine_failure_init" class="change-video">Engine Failure <br> (VM Shutdown)</button>
+	        	<button type="button" data-video="assets/video/solar_storm.mov" data-scenario="solar_storm_init" class="change-video">Solar Storm<br> (Network Outage)</button>
+	        	<button type="button" data-video="assets/video/shields_down.mov" data-scenario="shields_down_init" class="change-video">Shields Down<br> (Selinux Down)</button>
+			</div>
+			
+			<div class="auto-wrap">
+				<button data-video="assets/video/home.mp4" class="auto-video"></button>
+			</div>			
+		</div>
+	</div>
+	
+	<script src="assets/js/gsap.min.js"></script>
+	<script src="assets/js/main.js?v=2"></script>
+</body>
+</html>

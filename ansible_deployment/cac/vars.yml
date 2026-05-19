@@ -1,0 +1,250 @@
+---
+# =============================================================================
+# AAP Configuration as Code — SCUI SpaceShip Demo
+# =============================================================================
+# Two organizations:
+#   - Break        (hidden from audience — break playbooks that cause scenarios)
+#   - SpaceShip    (customer-visible — EDA detects issues and resolves them)
+#
+# apply.yml loads this file and runs infra.aap_configuration.dispatch
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Organizations
+# -----------------------------------------------------------------------------
+aap_organizations:
+  - name: "Break"
+    description: "Internal — scenario break playbooks (not visible to demo audience)"
+  - name: "SpaceShip"
+    description: "SpaceShip operations — EDA-driven detection and automated remediation"
+
+# -----------------------------------------------------------------------------
+# Organization Admin Users
+# -----------------------------------------------------------------------------
+aap_user_accounts:
+  - username: "break_admin"
+    password: "{{ org_admin_password }}"
+    first_name: "Break"
+    last_name: "Admin"
+    email: "break_admin@spaceship.local"
+    is_superuser: false
+    organization: "Break"
+
+  - username: "spaceship_admin"
+    password: "{{ org_admin_password }}"
+    first_name: "SpaceShip"
+    last_name: "Admin"
+    email: "spaceship_admin@spaceship.local"
+    is_superuser: false
+    organization: "SpaceShip"
+
+controller_roles:
+  - user: "break_admin"
+    organization: "Break"
+    role: "admin"
+  - user: "spaceship_admin"
+    organization: "SpaceShip"
+    role: "admin"
+
+# -----------------------------------------------------------------------------
+# Custom Credential Types
+# -----------------------------------------------------------------------------
+controller_credential_types:
+  - name: "SCUI API Token"
+    description: "Bearer token for the SCUI UI control API"
+    kind: "cloud"
+    inputs:
+      fields:
+        - id: SCUI_HOST
+          type: string
+          label: "SCUI Host (host:port)"
+        - id: SCUI_PROTOCOL
+          type: string
+          label: "Protocol (http or https)"
+        - id: AAP_API_CLIENT_BEARER_TOKEN
+          type: string
+          label: "API Bearer Token"
+          secret: true
+      required:
+        - SCUI_HOST
+    injectors:
+      env:
+        SCUI_HOST: !unsafe "{{ SCUI_HOST }}"
+        SCUI_PROTOCOL: !unsafe "{{ SCUI_PROTOCOL }}"
+        AAP_API_CLIENT_BEARER_TOKEN: !unsafe "{{ AAP_API_CLIENT_BEARER_TOKEN }}"
+
+# -----------------------------------------------------------------------------
+# Projects
+# -----------------------------------------------------------------------------
+controller_projects:
+  - name: "SpaceShip Break Scenarios"
+    description: "Playbooks that cause spaceship failures (internal use only)"
+    organization: "Break"
+    scm_type: "git"
+    scm_url: "{{ git_repo_url }}"
+    scm_branch: "main"
+    scm_update_on_launch: true
+
+  - name: "SpaceShip Automation"
+    description: "EDA-triggered remediation playbooks for spaceship systems"
+    organization: "SpaceShip"
+    scm_type: "git"
+    scm_url: "{{ git_repo_url }}"
+    scm_branch: "main"
+    scm_update_on_launch: true
+
+# -----------------------------------------------------------------------------
+# Inventories
+# -----------------------------------------------------------------------------
+controller_inventories:
+  - name: "Break Targets"
+    description: "AWS resources targeted by break scenarios"
+    organization: "Break"
+
+  - name: "SpaceShip Systems"
+    description: "All spaceship infrastructure managed by remediation playbooks"
+    organization: "SpaceShip"
+
+# -----------------------------------------------------------------------------
+# Hosts
+# -----------------------------------------------------------------------------
+controller_hosts:
+  - name: "localhost"
+    inventory: "Break Targets"
+    variables:
+      ansible_connection: local
+
+  - name: "localhost"
+    inventory: "SpaceShip Systems"
+    variables:
+      ansible_connection: local
+
+# -----------------------------------------------------------------------------
+# Credentials
+# -----------------------------------------------------------------------------
+controller_credentials:
+  # Break org — AWS creds to stop instances
+  - name: "AWS Credentials"
+    description: "AWS access for EC2 operations (break scenarios)"
+    organization: "Break"
+    credential_type: "Amazon Web Services"
+    inputs:
+      username: "{{ aws_access_key }}"
+      password: "{{ aws_secret_key }}"
+
+  - name: "SCUI API"
+    description: "Token to trigger SCUI screen state changes"
+    organization: "Break"
+    credential_type: "SCUI API Token"
+    inputs:
+      SCUI_HOST: "{{ scui_host }}"
+      SCUI_PROTOCOL: "{{ scui_protocol }}"
+      AAP_API_CLIENT_BEARER_TOKEN: "{{ api_client_bearer_token }}"
+
+  # SpaceShip org — AWS creds to start instances back up
+  - name: "AWS Credentials"
+    description: "AWS access for EC2 operations (remediation)"
+    organization: "SpaceShip"
+    credential_type: "Amazon Web Services"
+    inputs:
+      username: "{{ aws_access_key }}"
+      password: "{{ aws_secret_key }}"
+
+  - name: "SCUI API"
+    description: "Token to trigger SCUI screen state changes"
+    organization: "SpaceShip"
+    credential_type: "SCUI API Token"
+    inputs:
+      SCUI_HOST: "{{ scui_host }}"
+      SCUI_PROTOCOL: "{{ scui_protocol }}"
+      AAP_API_CLIENT_BEARER_TOKEN: "{{ api_client_bearer_token }}"
+
+  - name: "AAP Controller"
+    description: "Token credential for EDA to launch job templates"
+    organization: "SpaceShip"
+    credential_type: "Red Hat Ansible Automation Platform"
+    inputs:
+      host: "{{ aap_hostname }}"
+      oauth_token: "{{ aap_token }}"
+      verify_ssl: "{{ aap_validate_certs | bool }}"
+
+# -----------------------------------------------------------------------------
+# Job Templates
+# -----------------------------------------------------------------------------
+controller_templates:
+  # --- Break org (hidden) ---
+  - name: "Engine Failure — Break"
+    description: "Stop the Warpdrive Engine EC2 instance and trigger SCUI crisis state"
+    organization: "Break"
+    job_type: "run"
+    project: "SpaceShip Break Scenarios"
+    playbook: "playbooks/break/engine_failure.yml"
+    inventory: "Break Targets"
+    ask_variables_on_launch: true
+    credentials:
+      - "AWS Credentials"
+      - "SCUI API"
+    extra_vars:
+      aws_region: "{{ aws_region }}"
+      instance_id: "{{ warpdrive_engine_instance_id }}"
+
+  # --- SpaceShip org (visible — EDA triggers this) ---
+  - name: "Engine Failure — Resolve"
+    description: "Restart the Warpdrive Engine and notify SCUI of resolution"
+    organization: "SpaceShip"
+    job_type: "run"
+    project: "SpaceShip Automation"
+    playbook: "playbooks/resolve/engine_failure.yml"
+    inventory: "SpaceShip Systems"
+    ask_variables_on_launch: true
+    credentials:
+      - "AWS Credentials"
+      - "SCUI API"
+    extra_vars:
+      aws_region: "{{ aws_region }}"
+      instance_id: "{{ warpdrive_engine_instance_id }}"
+
+# -----------------------------------------------------------------------------
+# EDA — SpaceShip org
+# -----------------------------------------------------------------------------
+eda_projects:
+  - name: "SpaceShip Event Rules"
+    description: "EDA rulebooks for spaceship event monitoring and automated response"
+    organization: "SpaceShip"
+    scm_type: "git"
+    scm_url: "{{ git_repo_url }}"
+    scm_branch: "main"
+    scm_update_on_launch: true
+    sync: true
+
+eda_credentials:
+  - name: "AAP Controller"
+    description: "Token for EDA to launch Controller job templates"
+    organization: "SpaceShip"
+    credential_type: "Red Hat Ansible Automation Platform"
+    inputs:
+      host: "{{ aap_hostname }}"
+      oauth_token: "{{ aap_token }}"
+      verify_ssl: "{{ aap_validate_certs }}"
+
+eda_decision_environments:
+  - name: "snow-de"
+    description: "Decision Environment with ServiceNow and EDA collections"
+    organization: "SpaceShip"
+    image_url: "{{ snow_de_image }}"
+
+  - name: "aws-sqs-de"
+    description: "Decision Environment with AWS and EDA collections for SQS event sources"
+    organization: "SpaceShip"
+    image_url: "{{ aws_sqs_de_image }}"
+
+eda_rulebook_activations:
+  - name: "Warpdrive Engine Monitor"
+    description: "Polls SQS for CloudTrail StopInstances events on the Warpdrive Engine and triggers remediation"
+    organization: "SpaceShip"
+    project: "SpaceShip Event Rules"
+    rulebook: "rulebooks/engine_failure.yml"
+    decision_environment: "aws-sqs-de"
+    eda_credentials:
+      - "AAP Controller"
+    enabled: true

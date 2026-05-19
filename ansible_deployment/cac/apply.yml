@@ -1,0 +1,41 @@
+---
+- name: Apply AAP objects (Controller and EDA) via infra.aap_configuration
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  collections:
+    - infra.aap_configuration
+
+  vars:
+    aap_hostname: "{{ lookup('env', 'AAP_BASE_URL') | default('', true) | regex_replace('/api/.*$', '') }}"
+    aap_token: "{{ lookup('env', 'AAP_API_CLIENT_BEARER_TOKEN') | default(omit, true) }}"
+    aap_validate_certs: "{{ (lookup('env', 'AAP_VALIDATE_CERTS') | default('false', true)) | bool }}"
+
+    aap_configuration_secure_logging: false
+    aap_configuration_collect_logs: true
+
+    org_admin_password: "{{ lookup('env', 'AAP_ORG_ADMIN_PASSWORD') | default('Redhat123!', true) }}"
+
+    aws_access_key: "{{ lookup('env', 'AWS_ACCESS_KEY_ID') | default(omit, true) }}"
+    aws_secret_key: "{{ lookup('env', 'AWS_SECRET_ACCESS_KEY') | default(omit, true) }}"
+    aws_region: "{{ lookup('env', 'AWS_REGION') | default('eu-west-1', true) }}"
+
+    scui_host: "{{ lookup('env', 'SCUI_HOST') | default('localhost:8080', true) }}"
+    scui_protocol: "{{ lookup('env', 'SCUI_PROTOCOL') | default('http', true) }}"
+    api_client_bearer_token: "{{ lookup('env', 'AAP_API_CLIENT_BEARER_TOKEN') | default('', true) }}"
+
+    warpdrive_engine_instance_id: "{{ lookup('env', 'WARPDRIVE_ENGINE_INSTANCE_ID') | default('', true) }}"
+
+    sn_instance: "{{ lookup('env', 'SERVICENOW_INSTANCE_URL') | default(omit, true) }}"
+    sn_username: "{{ lookup('env', 'SERVICENOW_USERNAME') | default(omit, true) }}"
+    sn_password: "{{ lookup('env', 'SERVICENOW_PASSWORD') | default(omit, true) }}"
+
+    git_repo_url: "{{ lookup('env', 'GIT_REPO_URL') | default('https://github.com/rham-playbooks/scui.git', true) }}"
+
+    snow_de_image: "{{ lookup('env', 'SNOW_DE_IMAGE') | default('quay.io/crenwick93/snow-de:latest', true) }}"
+    aws_sqs_de_image: "{{ lookup('env', 'AWS_SQS_DE_IMAGE') | default('quay.io/crenwick93/aws-sqs-de:latest', true) }}"
+
+  vars_files:
+    - vars.yml
+  roles:
+    - role: infra.aap_configuration.dispatch

@@ -8,6 +8,7 @@ RUN apk add --no-cache nodejs-current npm
 RUN rm -rf /usr/share/nginx/html/*
 COPY index.html /usr/share/nginx/html/index.html
 COPY assets/ /usr/share/nginx/html/assets/
+COPY podium/ /usr/share/nginx/html/podium/
 
 # Configure nginx via template processed at container start (envsubst)
 RUN mkdir -p /etc/nginx/templates

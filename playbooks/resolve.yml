@@ -1,0 +1,42 @@
+---
+- name: Resolve a SCUI scenario via the UI control API
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    scui_host: "{{ lookup('env', 'SCUI_HOST') | default('localhost:8080', true) }}"
+    scui_protocol: "{{ lookup('env', 'SCUI_PROTOCOL') | default('http', true) }}"
+    api_token: "{{ lookup('env', 'AAP_API_CLIENT_BEARER_TOKEN') | default('', true) }}"
+
+  tasks:
+    - name: Validate scenario variable
+      ansible.builtin.assert:
+        that:
+          - scenario is defined
+          - scenario in ['engine_failure', 'solar_storm', 'shields_down']
+        fail_msg: >
+          Set -e scenario=<name> where name is one of:
+          engine_failure, solar_storm, shields_down, docking_refused
+
+    - name: Send resolve event to SCUI
+      ansible.builtin.uri:
+        url: "{{ scui_protocol }}://{{ scui_host }}/api/controller/ui/home"
+        method: POST
+        body_format: json
+        body:
+          scenario: "{{ scenario }}_resolved"
+        headers: >-
+          {{
+            (api_token | length > 0)
+            | ternary(
+                {'Authorization': 'Bearer ' + api_token, 'Content-Type': 'application/json'},
+                {'Content-Type': 'application/json'}
+              )
+          }}
+        status_code: [200, 204]
+      register: result
+
+    - name: Result
+      ansible.builtin.debug:
+        msg: "Resolve sent for {{ scenario }} -> HTTP {{ result.status }}"

@@ -1,0 +1,17 @@
+---
+- name: "Engine Failure: Watch for Warpdrive Engine shutdown via SQS"
+  hosts: all
+
+  sources:
+    - amazon.aws.aws_sqs_queue:
+        queue_name: scui-engine-failure-events
+        region: "{{ lookup('env', 'AWS_REGION') | default('eu-west-1', true) }}"
+        delay_seconds: 5
+
+  rules:
+    - name: Warpdrive Engine stopped — launch remediation
+      condition: >-
+        event.body.detail.eventName == "StopInstances"
+      action:
+        run_playbook:
+          name: playbooks/resolve/engine_failure.yml

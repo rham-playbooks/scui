@@ -1,0 +1,53 @@
+---
+- name: "Engine Failure: Restart the Warpdrive Engine (VM Recovery)"
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    aws_region: "{{ lookup('env', 'AWS_REGION') | default('eu-west-1', true) }}"
+    instance_id: "{{ lookup('env', 'WARPDRIVE_ENGINE_INSTANCE_ID') }}"
+    scui_host: "{{ lookup('env', 'SCUI_HOST') | default('localhost:8080', true) }}"
+    scui_protocol: "{{ lookup('env', 'SCUI_PROTOCOL') | default('http', true) }}"
+    api_token: "{{ lookup('env', 'AAP_API_CLIENT_BEARER_TOKEN') | default('', true) }}"
+
+  tasks:
+    - name: Validate instance ID is set
+      ansible.builtin.assert:
+        that:
+          - instance_id | length > 0
+        fail_msg: >
+          WARPDRIVE_ENGINE_INSTANCE_ID is not set.
+
+    - name: Start the Warpdrive Engine instance
+      amazon.aws.ec2_instance:
+        region: "{{ aws_region }}"
+        instance_ids:
+          - "{{ instance_id }}"
+        state: running
+        wait: true
+        wait_timeout: 120
+      register: start_result
+
+    - name: Trigger SCUI resolved state
+      ansible.builtin.uri:
+        url: "{{ scui_protocol }}://{{ scui_host }}/api/controller/ui/home"
+        method: POST
+        body_format: json
+        body:
+          scenario: engine_failure_resolved
+        headers: >-
+          {{
+            (api_token | length > 0)
+            | ternary(
+                {'Authorization': 'Bearer ' + api_token, 'Content-Type': 'application/json'},
+                {'Content-Type': 'application/json'}
+              )
+          }}
+        status_code: [200, 204]
+
+    - name: Report
+      ansible.builtin.debug:
+        msg: >-
+          Warpdrive Engine {{ instance_id }} is running again.
+          SCUI has been notified — resolved video playing.
