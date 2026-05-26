@@ -5,7 +5,7 @@
   sources:
     - amazon.aws.aws_sqs_queue:
         queue_name: scui-engine-failure-events
-        region: "{{ lookup('env', 'AWS_REGION') | default('eu-west-1', true) }}"
+        region: eu-west-1
         delay_seconds: 5
 
   rules:
