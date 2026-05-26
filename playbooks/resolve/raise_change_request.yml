@@ -35,12 +35,12 @@
         other:
           parent: "{{ incident_sys_id }}"
           implementation_plan: >-
-            {{ {'job_template': 'Solar Storm — Resolve',
-                'organization': 'SpaceShip',
-                'extra_vars': {
-                  'incident_sys_id': incident_sys_id,
-                  'incident_number': incident_number
-                }} | to_json }}
+            {"job_template": "Solar Storm — Resolve",
+             "organization": "SpaceShip",
+             "extra_vars": {
+               "incident_sys_id": "{{ incident_sys_id }}",
+               "incident_number": "{{ incident_number }}"
+             }}
       register: snow_change
 
     - name: Show change request number
@@ -51,6 +51,7 @@
       servicenow.itsm.change_request:
         number: "{{ snow_change.record.number }}"
         state: authorize
+        assignment_group: "Event_Driven_Ansible"
         other:
           approval: requested
       tags:
