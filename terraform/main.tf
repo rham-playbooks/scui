@@ -265,3 +265,69 @@ resource "aws_cloudwatch_event_target" "engine_failure_sqs" {
   target_id = "send-to-sqs"
   arn       = aws_sqs_queue.engine_failure_events.arn
 }
+
+# ---------------------------------------------------------------------------
+# Solar Storm scenario: "Earth Comms" EC2 — ICMP toggle via security group
+# ---------------------------------------------------------------------------
+
+resource "aws_security_group" "earth_comms" {
+  name        = "earth-comms-sg"
+  description = "Earth Comms - ICMP allowed, used by Solar Storm scenario"
+  vpc_id      = aws_vpc.scui.id
+
+  ingress {
+    description = "ICMP ping"
+    from_port   = -1
+    to_port     = -1
+    protocol    = "icmp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "SSH"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name     = "earth-comms-sg"
+    Demo     = "true"
+    Scenario = "solar_storm"
+    Project  = "scui"
+  }
+}
+
+resource "aws_instance" "earth_comms" {
+  ami                    = data.aws_ami.rhel9.id
+  instance_type          = "t3.micro"
+  subnet_id              = aws_subnet.public.id
+  vpc_security_group_ids = [aws_security_group.earth_comms.id]
+  key_name               = aws_key_pair.scui.key_name
+
+  tags = {
+    Name     = "earth-comms"
+    Demo     = "true"
+    Scenario = "solar_storm"
+    Project  = "scui"
+  }
+}
+
+resource "aws_eip" "earth_comms" {
+  instance = aws_instance.earth_comms.id
+
+  tags = {
+    Name     = "earth-comms-eip"
+    Demo     = "true"
+    Scenario = "solar_storm"
+    Project  = "scui"
+  }
+}

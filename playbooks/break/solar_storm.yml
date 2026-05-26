@@ -1,0 +1,98 @@
+---
+- name: "Solar Storm: Notify SCUI and create ServiceNow tickets"
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    scui_host: "{{ lookup('env', 'SCUI_HOST') | default('localhost:8080', true) }}"
+    scui_protocol: "{{ lookup('env', 'SCUI_PROTOCOL') | default('http', true) }}"
+    api_token: "{{ lookup('env', 'AAP_API_CLIENT_BEARER_TOKEN') | default('', true) }}"
+    sn_host: "{{ lookup('env', 'SN_HOST') | default(omit, true) }}"
+    sn_username: "{{ lookup('env', 'SN_USERNAME') | default(omit, true) }}"
+    sn_password: "{{ lookup('env', 'SN_PASSWORD') | default(omit, true) }}"
+    sn_caller_name: "{{ lookup('env', 'SN_CALLER_NAME') | default('Event Driven Ansible', true) }}"
+    earth_comms_host: "{{ lookup('env', 'EARTH_COMMS_HOST') }}"
+
+  tasks:
+    - name: Trigger SCUI crisis state
+      ansible.builtin.uri:
+        url: "{{ scui_protocol }}://{{ scui_host }}/api/controller/ui/home"
+        method: POST
+        body_format: json
+        body:
+          scenario: solar_storm_init
+        headers: >-
+          {{
+            (api_token | length > 0)
+            | ternary(
+                {'Authorization': 'Bearer ' + api_token, 'Content-Type': 'application/json'},
+                {'Content-Type': 'application/json'}
+              )
+          }}
+        status_code: [200, 204]
+      ignore_errors: true
+
+    - name: Create ServiceNow incident
+      servicenow.itsm.incident:
+        state: new
+        short_description: "Network outage — Earth communications lost"
+        description: |
+          A solar storm has disrupted communications with the Earth network.
+          ICMP connectivity to earth.chrislab.dev is down.
+          Automated remediation requires a change request to be raised and approved.
+        impact: high
+        urgency: high
+        other:
+          caller_id: "{{ sn_caller_name }}"
+      register: snow_incident
+
+    - name: Show incident number
+      ansible.builtin.debug:
+        msg: "Incident created: {{ snow_incident.record.number }}"
+
+    - name: Create ServiceNow change request
+      servicenow.itsm.change_request:
+        state: new
+        type: emergency
+        short_description: "Restore Earth comms — re-enable ICMP on earth-comms"
+        description: |
+          Solar storm has caused network outage to Earth communications.
+          Incident: {{ snow_incident.record.number }}
+
+          Implementation: Re-enable ICMP on the earth-comms firewall.
+          When this change is moved to Implement, EDA will automatically execute the fix.
+        impact: high
+        urgency: high
+        other:
+          parent: "{{ snow_incident.record.sys_id }}"
+      register: snow_change
+
+    - name: Show change request number
+      ansible.builtin.debug:
+        msg: "Change request created: {{ snow_change.record.number }}"
+
+    - name: Update incident with change request reference
+      servicenow.itsm.incident:
+        sys_id: "{{ snow_incident.record.sys_id }}"
+        other:
+          work_notes: >-
+            Change request {{ snow_change.record.number }} has been raised.
+            Awaiting approval — EDA is monitoring for Implement state.
+
+- name: "Solar Storm: Block ICMP on Earth Comms"
+  hosts: earth_comms
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Block all ICMP traffic via firewalld
+      ansible.posix.firewalld:
+        rich_rule: 'rule protocol value="icmp" drop'
+        permanent: true
+        immediate: true
+        state: enabled
+
+    - name: Report
+      ansible.builtin.debug:
+        msg: "ICMP blocked on {{ inventory_hostname }}. Ping to earth.chrislab.dev will fail."

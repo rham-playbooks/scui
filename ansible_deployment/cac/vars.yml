@@ -45,6 +45,35 @@ controller_credential_types:
         SCUI_PROTOCOL: !unsafe "{{ SCUI_PROTOCOL }}"
         AAP_API_CLIENT_BEARER_TOKEN: !unsafe "{{ AAP_API_CLIENT_BEARER_TOKEN }}"
 
+  - name: "ServiceNow ITSM"
+    description: "ServiceNow instance credentials injected as env vars"
+    kind: "cloud"
+    inputs:
+      fields:
+        - id: SN_HOST
+          type: string
+          label: "ServiceNow Instance URL"
+        - id: SN_USERNAME
+          type: string
+          label: "ServiceNow Username"
+        - id: SN_PASSWORD
+          type: string
+          label: "ServiceNow Password"
+          secret: true
+        - id: SN_CALLER_NAME
+          type: string
+          label: "ServiceNow Caller Name"
+      required:
+        - SN_HOST
+        - SN_USERNAME
+        - SN_PASSWORD
+    injectors:
+      env:
+        SN_HOST: !unsafe "{{ SN_HOST }}"
+        SN_USERNAME: !unsafe "{{ SN_USERNAME }}"
+        SN_PASSWORD: !unsafe "{{ SN_PASSWORD }}"
+        SN_CALLER_NAME: !unsafe "{{ SN_CALLER_NAME }}"
+
 # -----------------------------------------------------------------------------
 # Projects
 # -----------------------------------------------------------------------------
@@ -86,10 +115,22 @@ controller_hosts:
     variables:
       ansible_connection: local
 
+  - name: "earth_comms"
+    inventory: "Break Targets"
+    variables:
+      ansible_host: "{{ earth_comms_host }}"
+      ansible_user: ec2-user
+
   - name: "localhost"
     inventory: "SpaceShip Systems"
     variables:
       ansible_connection: local
+
+  - name: "earth_comms"
+    inventory: "SpaceShip Systems"
+    variables:
+      ansible_host: "{{ earth_comms_host }}"
+      ansible_user: ec2-user
 
 # -----------------------------------------------------------------------------
 # Credentials
@@ -131,6 +172,42 @@ controller_credentials:
       SCUI_PROTOCOL: "{{ scui_protocol }}"
       AAP_API_CLIENT_BEARER_TOKEN: "{{ api_client_bearer_token }}"
 
+  - name: "ServiceNow — Break"
+    description: "ServiceNow credentials for creating incidents and change requests"
+    organization: "Break"
+    credential_type: "ServiceNow ITSM"
+    inputs:
+      SN_HOST: "{{ sn_instance }}"
+      SN_USERNAME: "{{ sn_username }}"
+      SN_PASSWORD: "{{ sn_password }}"
+      SN_CALLER_NAME: "{{ sn_caller_name }}"
+
+  - name: "ServiceNow — SpaceShip"
+    description: "ServiceNow credentials for resolving incidents and change requests"
+    organization: "SpaceShip"
+    credential_type: "ServiceNow ITSM"
+    inputs:
+      SN_HOST: "{{ sn_instance }}"
+      SN_USERNAME: "{{ sn_username }}"
+      SN_PASSWORD: "{{ sn_password }}"
+      SN_CALLER_NAME: "{{ sn_caller_name }}"
+
+  - name: "SSH Key — Break"
+    description: "SSH key for connecting to demo EC2 instances"
+    organization: "Break"
+    credential_type: "Machine"
+    inputs:
+      username: ec2-user
+      ssh_key_data: "{{ machine_ssh_key }}"
+
+  - name: "SSH Key — SpaceShip"
+    description: "SSH key for connecting to demo EC2 instances"
+    organization: "SpaceShip"
+    credential_type: "Machine"
+    inputs:
+      username: ec2-user
+      ssh_key_data: "{{ machine_ssh_key }}"
+
   - name: "AAP Controller"
     description: "Token credential for EDA to launch job templates"
     organization: "SpaceShip"
@@ -160,7 +237,20 @@ controller_templates:
       aws_region: "{{ aws_region }}"
       instance_id: "{{ warpdrive_engine_instance_id }}"
 
-  # --- SpaceShip org (visible — EDA triggers this) ---
+  - name: "Solar Storm — Break"
+    description: "Block ICMP on Earth Comms, create ServiceNow incident and change request"
+    organization: "Break"
+    job_type: "run"
+    project: "SpaceShip Break Scenarios"
+    playbook: "playbooks/break/solar_storm.yml"
+    inventory: "Break Targets"
+    ask_variables_on_launch: true
+    credentials:
+      - "SSH Key — Break"
+      - "SCUI API — Break"
+      - "ServiceNow — Break"
+
+  # --- SpaceShip org (visible — EDA triggers these) ---
   - name: "Engine Failure — Resolve"
     description: "Restart the Warpdrive Engine and notify SCUI of resolution"
     organization: "SpaceShip"
@@ -176,6 +266,19 @@ controller_templates:
       aws_region: "{{ aws_region }}"
       instance_id: "{{ warpdrive_engine_instance_id }}"
 
+  - name: "Solar Storm — Resolve"
+    description: "Re-enable ICMP on Earth Comms, update ServiceNow, notify SCUI"
+    organization: "SpaceShip"
+    job_type: "run"
+    project: "SpaceShip Automation"
+    playbook: "playbooks/resolve/solar_storm.yml"
+    inventory: "SpaceShip Systems"
+    ask_variables_on_launch: true
+    credentials:
+      - "SSH Key — SpaceShip"
+      - "SCUI API — SpaceShip"
+      - "ServiceNow — SpaceShip"
+
 # -----------------------------------------------------------------------------
 # EDA — SpaceShip org
 # -----------------------------------------------------------------------------
@@ -190,6 +293,30 @@ eda_projects:
     sync: true
 
 eda_credential_types:
+  - name: "ServiceNow Environment"
+    description: "Injects ServiceNow credentials as environment variables for EDA"
+    inputs:
+      fields:
+        - id: sn_host
+          type: string
+          label: "ServiceNow Instance URL"
+        - id: sn_username
+          type: string
+          label: "ServiceNow Username"
+        - id: sn_password
+          type: string
+          label: "ServiceNow Password"
+          secret: true
+      required:
+        - sn_host
+        - sn_username
+        - sn_password
+    injectors:
+      env:
+        SN_HOST: !unsafe "{{ sn_host }}"
+        SN_USERNAME: !unsafe "{{ sn_username }}"
+        SN_PASSWORD: !unsafe "{{ sn_password }}"
+
   - name: "AWS Environment"
     description: "Injects AWS credentials as environment variables for boto3"
     inputs:
@@ -232,6 +359,15 @@ eda_credentials:
       aws_secret_access_key: "{{ aws_secret_key }}"
       aws_default_region: "{{ aws_region }}"
 
+  - name: "ServiceNow EDA"
+    description: "ServiceNow credentials for EDA to poll change requests"
+    organization: "SpaceShip"
+    credential_type: "ServiceNow Environment"
+    inputs:
+      sn_host: "{{ sn_instance }}"
+      sn_username: "{{ sn_username }}"
+      sn_password: "{{ sn_password }}"
+
 eda_decision_environments:
   - name: "snow-de"
     description: "Decision Environment with ServiceNow and EDA collections"
@@ -253,4 +389,15 @@ eda_rulebook_activations:
     eda_credentials:
       - "AAP Controller"
       - "AWS SQS Access"
+    enabled: true
+
+  - name: "Earth Comms Change Monitor"
+    description: "Polls ServiceNow change_request table for Implement state and triggers Solar Storm resolution"
+    organization: "SpaceShip"
+    project: "SpaceShip Event Rules"
+    rulebook: "snow_change_requests.yml"
+    decision_environment: "snow-de"
+    eda_credentials:
+      - "AAP Controller"
+      - "ServiceNow EDA"
     enabled: true

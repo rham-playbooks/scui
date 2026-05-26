@@ -32,3 +32,13 @@ output "engine_failure_sqs_queue_name" {
   description = "SQS queue name for Engine Failure EDA events"
   value       = aws_sqs_queue.engine_failure_events.name
 }
+
+output "earth_comms_public_ip" {
+  description = "Public IP of the Earth Comms instance (earth.chrislab.dev)"
+  value       = aws_eip.earth_comms.public_ip
+}
+
+output "earth_comms_ssh_command" {
+  description = "SSH into the Earth Comms instance"
+  value       = "ssh -i terraform/scui-key.pem ec2-user@${aws_eip.earth_comms.public_ip}"
+}

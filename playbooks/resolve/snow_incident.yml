@@ -1,0 +1,46 @@
+---
+- name: "ServiceNow incident management for config drift"
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  tasks:
+    # ── CREATE ────────────────────────────────────────────────────────
+    - name: Create incident
+      when: snow_action | default('create') == 'create'
+      block:
+        - name: Open new incident
+          servicenow.itsm.incident:
+            state: new
+            other:
+              caller_id: "{{ sn_caller_name | default('event_driven_ansible') }}"
+            short_description: "Config drift detected on {{ remediated_host | default('unknown') }}"
+            description: "Configuration drift detected — auto-remediation initiated by Ansible Automation Platform.\n\nHost:         {{ remediated_host | default('unknown') }}\nFile changed: {{ changed_file | default('unknown') }}\nDrift key:    {{ drift_key | default('manual') }}\nTriggered by: auid {{ triggering_user | default('unknown') }}\nSplunk SID:   {{ splunk_sid | default('n/a') }}\n\nRemediation is in progress. This incident will be auto-resolved on completion."
+            impact: low
+            urgency: low
+          register: snow_result
+
+        - name: Show incident number
+          ansible.builtin.debug:
+            msg: "ServiceNow incident created: {{ snow_result.record.number }} ({{ snow_result.record.sys_id }})"
+
+        - name: Pass incident ID to downstream workflow nodes
+          ansible.builtin.set_stats:
+            data:
+              snow_sys_id: "{{ snow_result.record.sys_id }}"
+              snow_number: "{{ snow_result.record.number }}"
+
+    # ── UPDATE / RESOLVE ──────────────────────────────────────────────
+    - name: Resolve incident
+      when: snow_action | default('create') == 'update'
+      block:
+        - name: Update incident to resolved
+          servicenow.itsm.incident:
+            sys_id: "{{ snow_sys_id }}"
+            state: resolved
+            close_code: "Solution provided"
+            close_notes: "Auto-remediated by Ansible Automation Platform.\n\nHost:       {{ remediated_host | default('unknown') }}\nAAP Job ID: {{ awx_job_id | default('local') }}\n\nDesired configuration state restored from Git baseline."
+
+        - name: Show resolution
+          ansible.builtin.debug:
+            msg: "ServiceNow incident {{ snow_number | default(snow_sys_id) }} resolved."

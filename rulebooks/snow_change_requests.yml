@@ -1,0 +1,27 @@
+---
+- name: Listen for ServiceNow change requests set to Implement
+  hosts: all
+  sources:
+    - servicenow.itsm.records:
+        table: change_request
+        interval: 10
+        sysparm_query: >
+          ORDERBYDESCsys_updated_on^ORDERBYDESCsys_id
+        filters:
+          - ansible.eda.json_filter:
+          - ansible.eda.normalize_keys:
+  rules:
+    - name: Run remediation when change is set to Implement
+      throttle:
+        once_within: 10 minutes
+        group_by_attributes:
+          - sys_id
+      condition: event.state == '-1'
+      action:
+        run_job_template:
+          name: "Solar Storm — Resolve"
+          organization: SpaceShip
+          job_args:
+            extra_vars:
+              change_sys_id: "{{ event.sys_id | default('') }}"
+              incident_sys_id: "{{ event.parent | default('') }}"

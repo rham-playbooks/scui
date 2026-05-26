@@ -29,10 +29,13 @@
     api_client_bearer_token: "{{ lookup('env', 'AAP_API_CLIENT_BEARER_TOKEN') | default('', true) }}"
 
     warpdrive_engine_instance_id: "{{ lookup('env', 'WARPDRIVE_ENGINE_INSTANCE_ID') | default('', true) }}"
+    earth_comms_host: "{{ lookup('env', 'EARTH_COMMS_HOST') | default('', true) }}"
+    machine_ssh_key: "{{ lookup('file', playbook_dir + '/../../terraform/scui-key.pem', errors='ignore') | default('', true) }}"
 
     sn_instance: "{{ lookup('env', 'SERVICENOW_INSTANCE_URL') | default(omit, true) }}"
     sn_username: "{{ lookup('env', 'SERVICENOW_USERNAME') | default(omit, true) }}"
     sn_password: "{{ lookup('env', 'SERVICENOW_PASSWORD') | default(omit, true) }}"
+    sn_caller_name: "{{ lookup('env', 'SERVICENOW_CALLER_NAME') | default('Event Driven Ansible', true) }}"
 
     git_repo_url: "{{ lookup('env', 'GIT_REPO_URL') | default('https://github.com/rham-playbooks/scui.git', true) }}"
 

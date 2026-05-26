@@ -1,0 +1,161 @@
+---
+- name: Gather machine info from ServiceNow CMDB
+  hosts: localhost
+  become: false
+  gather_facts: false
+  vars:
+    # Required input: CI sys_id coming from the rulebook/job launch
+    cmdb_ci: ""
+    sn_host: "{{ lookup('env','SN_HOST') | default(omit) }}"
+    sn_username: "{{ lookup('env','SN_USERNAME') | default(omit) }}"
+    sn_password: "{{ lookup('env','SN_PASSWORD') | default(omit) }}"
+
+  tasks:
+    - name: Validate required input cmdb_ci
+      ansible.builtin.assert:
+        that:
+          - cmdb_ci is not none
+          - (cmdb_ci | string | trim) != ''
+        fail_msg: "Missing required variable: cmdb_ci (CI sys_id)"
+
+    - name: Query CMDB for CI by sys_id
+      servicenow.itsm.configuration_item_info:
+        sys_id: "{{ cmdb_ci }}"
+        sysparm_display_value: true
+        host: "{{ sn_host }}"
+        username: "{{ sn_username }}"
+        password: "{{ sn_password }}"
+        validate_certs: false
+      register: ci_info
+      tags:
+        - skip_ansible_lint
+
+    - name: Extract CI record
+      ansible.builtin.set_fact:
+        ci_record: "{{ (ci_info.records | default([])) | first | default({}) }}"
+
+    - name: Derive environment from CI
+      ansible.builtin.set_fact:
+        ci_environment: "{{ ci_record.environment | default('') }}"
+
+    - name: Derive target host from CI
+      ansible.builtin.set_fact:
+        ci_target_host: "{{ ci_record.name | default(ci_record.display_name | default('')) }}"
+
+    - name: Ensure a target host was derived from CI
+      ansible.builtin.assert:
+        that:
+          - (ci_target_host | string | trim) != ''
+        fail_msg: "No target host found in CI record"
+
+    - name: Add derived host to dynamic group for next play
+      ansible.builtin.add_host:
+        name: "{{ ci_target_host }}"
+        groups: dynamic_target
+        ansible_host: "{{ ci_target_host }}"
+
+    - name: Emit environment, target host, and original event back to rulebook
+      ansible.builtin.set_stats:
+        data:
+          environment: "{{ ci_environment }}"
+          sys_id: "{{ ansible_eda.event.sys_id | default('') }}"
+          incident_number: "{{ ansible_eda.event.number | default('') }}"
+          description: "{{ ansible_eda.event.description | default('') }}"
+          correlation_id: "{{ ansible_eda.event.correlation_id | default('') }}"
+        aggregate: false
+
+# Diagnostics on nginx server
+- name: Run diagnostics on nginx server
+  hosts: dynamic_target
+  become: true
+  gather_facts: true
+
+  pre_tasks:
+    - name: Ensure only one host is targeted
+      ansible.builtin.assert:
+        that:
+          - ansible_play_hosts | length <= 1
+        fail_msg: "Should only be one host in the play."
+
+  tasks:
+    - name: Check if nginx service is active
+      ansible.builtin.systemd:
+        name: nginx
+      register: nginx_service_result
+      failed_when: false
+
+    - name: Validate nginx configuration
+      ansible.builtin.command: nginx -t
+      register: nginx_config_result
+      changed_when: false
+      failed_when: false
+
+    - name: Check if firewalld is running
+      ansible.builtin.systemd:
+        name: firewalld
+      register: firewall_result
+      failed_when: false
+
+    - name: Check if port 443 is open
+      ansible.builtin.command: firewall-cmd --list-ports
+      register: firewall_ports_result
+      changed_when: false
+      failed_when: false
+
+    - name: Build structured diagnostics data
+      ansible.builtin.set_fact:
+        diagnostics_structured:
+          nginx_service_active: "{{ nginx_service_result.status.ActiveState == 'active' }}"
+          nginx_service_error: >-
+            {% if nginx_service_result.status.ActiveState != 'active' %}
+              {{ nginx_service_result.status.SubState }}
+            {% else %}
+              ''
+            {% endif %}
+          nginx_config_ok: "{{ nginx_config_result.rc == 0 }}"
+          nginx_config_error: >-
+            {% if nginx_config_result.rc != 0 %}
+              {{ nginx_config_result.stderr }}
+            {% else %}
+              ''
+            {% endif %}
+          firewall_active: "{{ firewall_result.status.ActiveState == 'active' }}"
+          firewall_port_443_open: "{{ '443/tcp' in firewall_ports_result.stdout }}"
+          overall_health: >-
+            {% if (nginx_service_result.status.ActiveState == 'active') and
+                   (nginx_config_result.rc == 0) and
+                   (firewall_result.status.ActiveState == 'active') and
+                   ('443/tcp' in firewall_ports_result.stdout) %}
+              ok
+            {% else %}
+              issues_detected
+            {% endif %}
+
+    - name: Create readable diagnostics report
+      ansible.builtin.set_fact:
+        diagnostics_report: |
+          ################################### EDA REPORT ############################
+
+          NGINX service active: {{ nginx_service_result.status.ActiveState == 'active' }}
+          NGINX service error: {{ nginx_service_result.status.SubState if nginx_service_result.status.ActiveState != 'active' else '' }}
+          NGINX config test ok: {{ nginx_config_result.rc == 0 }}
+          NGINX config error: {{ nginx_config_result.stderr if nginx_config_result.rc != 0 else '' }}
+          Firewalld active: {{ firewall_result.status.ActiveState == 'active' }}
+          Port 443 open: {{ '443/tcp' in firewall_ports_result.stdout }}
+          Overall health: {{
+            'ok' if (
+              (nginx_service_result.status.ActiveState == 'active') and
+              (nginx_config_result.rc == 0) and
+              (firewall_result.status.ActiveState == 'active') and
+              ('443/tcp' in firewall_ports_result.stdout)
+            ) else 'issues_detected'
+          }}
+
+    - name: Consolidate all facts and original event into set_stats
+      ansible.builtin.set_stats:
+        data:
+         # incident_sys_id: "{{ incident_sys_id }}"
+          eda_event: "{{ ansible_eda.event | default({}) }}"
+          diagnostics_structured: "{{ diagnostics_structured }}"
+          target_host: "{{ hostvars[inventory_hostname].ansible_host | default(inventory_hostname) }}"
+          diagnostics_report: "{{ diagnostics_report }}"
