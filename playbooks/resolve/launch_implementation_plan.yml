@@ -36,11 +36,9 @@
 
     - name: Launch job template
       ansible.controller.job_launch: # noqa no-unresolved
-        # (These can be omitted if provided via env in AAP)
-        # controller_host: "{{ lookup('env','CONTROLLER_HOST') | regex_replace('/api/.*$', '') }}"
-        # controller_username: "{{ lookup('env','CONTROLLER_USERNAME') | default(omit) }}"
-        # controller_password: "{{ lookup('env','CONTROLLER_PASSWORD') | default(omit) }}"
-        # validate_certs: false
+        controller_host: "{{ lookup('env', 'CONTROLLER_HOST') | default(lookup('env', 'TOWER_HOST'), true) | regex_replace('/api/.*$', '') }}"
+        controller_oauthtoken: "{{ lookup('env', 'CONTROLLER_OAUTH_TOKEN') | default(lookup('env', 'TOWER_OAUTH_TOKEN'), true) }}"
+        validate_certs: false
         job_template: "{{ implementation_plan_json.job_template }}"
         organization: "{{ implementation_plan_json.organization | default(omit) }}"
         extra_vars: "{{ implementation_plan_json.extra_vars | default({}) }}"
@@ -50,7 +48,9 @@
 
     - name: Wait for job to finish
       ansible.controller.job_wait: # noqa no-unresolved
-        # controller_host/controller_* also read from env if set in AAP
+        controller_host: "{{ lookup('env', 'CONTROLLER_HOST') | default(lookup('env', 'TOWER_HOST'), true) | regex_replace('/api/.*$', '') }}"
+        controller_oauthtoken: "{{ lookup('env', 'CONTROLLER_OAUTH_TOKEN') | default(lookup('env', 'TOWER_OAUTH_TOKEN'), true) }}"
+        validate_certs: false
         job_id: "{{ launch.id }}"
         timeout: 1800
         interval: 2
