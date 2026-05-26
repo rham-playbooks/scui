@@ -55,7 +55,7 @@ controller_projects:
     scm_type: "git"
     scm_url: "{{ git_repo_url }}"
     scm_branch: "main"
-    scm_update_on_launch: true
+    scm_update_on_launch: false
 
   - name: "SpaceShip Automation"
     description: "EDA-triggered remediation playbooks for spaceship systems"
@@ -63,7 +63,7 @@ controller_projects:
     scm_type: "git"
     scm_url: "{{ git_repo_url }}"
     scm_branch: "main"
-    scm_update_on_launch: true
+    scm_update_on_launch: false
 
 # -----------------------------------------------------------------------------
 # Inventories
@@ -186,8 +186,32 @@ eda_projects:
     scm_type: "git"
     scm_url: "{{ git_repo_url }}"
     scm_branch: "main"
-    scm_update_on_launch: true
+    scm_update_on_launch: false
     sync: true
+
+eda_credential_types:
+  - name: "AWS Environment"
+    description: "Injects AWS credentials as environment variables for boto3"
+    inputs:
+      fields:
+        - id: aws_access_key_id
+          type: string
+          label: "AWS Access Key ID"
+        - id: aws_secret_access_key
+          type: string
+          label: "AWS Secret Access Key"
+          secret: true
+        - id: aws_default_region
+          type: string
+          label: "AWS Default Region"
+      required:
+        - aws_access_key_id
+        - aws_secret_access_key
+    injectors:
+      env:
+        AWS_ACCESS_KEY_ID: !unsafe "{{ aws_access_key_id }}"
+        AWS_SECRET_ACCESS_KEY: !unsafe "{{ aws_secret_access_key }}"
+        AWS_DEFAULT_REGION: !unsafe "{{ aws_default_region }}"
 
 eda_credentials:
   - name: "AAP Controller"
@@ -198,6 +222,15 @@ eda_credentials:
       host: "{{ aap_hostname }}/api/controller/"
       oauth_token: "{{ aap_token }}"
       verify_ssl: "{{ aap_validate_certs }}"
+
+  - name: "AWS SQS Access"
+    description: "AWS credentials for EDA source plugins (SQS polling)"
+    organization: "SpaceShip"
+    credential_type: "AWS Environment"
+    inputs:
+      aws_access_key_id: "{{ aws_access_key }}"
+      aws_secret_access_key: "{{ aws_secret_key }}"
+      aws_default_region: "{{ aws_region }}"
 
 eda_decision_environments:
   - name: "snow-de"
@@ -219,4 +252,5 @@ eda_rulebook_activations:
     decision_environment: "aws-sqs-de"
     eda_credentials:
       - "AAP Controller"
+      - "AWS SQS Access"
     enabled: true

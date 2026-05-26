@@ -3,23 +3,48 @@ let currentVideoIndex = 0;
 let autoPlayActive = false;
 const HOME_VIDEO_SRC = 'assets/video/home.mp4';
 
-function postScenario(scenario) {
-    const url = '/api/controller/ui/home';
-    console.log('[podium] Posting scenario:', scenario);
+const SCENARIO_JOB_TEMPLATES = {
+    engine_failure_init: 57,
+};
 
-    fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scenario }),
-    }).then(res => {
-        if (!res.ok) {
-            console.error('Scenario POST failed:', res.status, res.statusText);
-        } else {
-            console.log('Scenario POST succeeded:', scenario);
-        }
-    }).catch(err => {
-        console.error('Scenario POST error:', err);
-    });
+function postScenario(scenario) {
+    const jtId = SCENARIO_JOB_TEMPLATES[scenario];
+
+    if (jtId) {
+        const launchUrl = `/api/controller/aap/launch/${jtId}/`;
+        console.log('[podium] Launching AAP job template', jtId, 'for', scenario);
+
+        fetch(launchUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({}),
+        }).then(res => {
+            if (!res.ok) {
+                console.error('AAP launch failed:', res.status, res.statusText);
+            } else {
+                console.log('AAP job launched for', scenario);
+            }
+        }).catch(err => {
+            console.error('AAP launch error:', err);
+        });
+    } else {
+        const url = '/api/controller/ui/home';
+        console.log('[podium] Posting scenario:', scenario);
+
+        fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ scenario }),
+        }).then(res => {
+            if (!res.ok) {
+                console.error('Scenario POST failed:', res.status, res.statusText);
+            } else {
+                console.log('Scenario POST succeeded:', scenario);
+            }
+        }).catch(err => {
+            console.error('Scenario POST error:', err);
+        });
+    }
 }
 
 function setFullscreen(isEnabled) {
