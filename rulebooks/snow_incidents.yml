@@ -3,6 +3,10 @@
   hosts: all
   sources:
     - servicenow.itsm.records:
+        instance:
+          host: "{{ SN_HOST }}"
+          username: "{{ SN_USERNAME }}"
+          password: "{{ SN_PASSWORD }}"
         table: incident
         interval: 10
         sysparm_query: >
