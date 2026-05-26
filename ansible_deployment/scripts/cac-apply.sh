@@ -24,6 +24,11 @@ if [[ -f "${REPO_ROOT}/.env" ]]; then
   export $(grep -v '^#' "${REPO_ROOT}/.env" | xargs -I{} echo {})
 fi
 
+# Export AAP_TOKEN so the ansible.eda modules pick it up automatically
+# (infra.aap_configuration v3.x EDA roles don't pass controller_token)
+export AAP_TOKEN="${AAP_API_CLIENT_BEARER_TOKEN:-}"
+export CONTROLLER_TOKEN="${AAP_API_CLIENT_BEARER_TOKEN:-}"
+
 # Basic sanity: ansible-playbook present
 if ! command -v ansible-playbook >/dev/null 2>&1; then
   echo "Error: ansible-playbook not found. Install Ansible first."

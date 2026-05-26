@@ -11,6 +11,10 @@
     aap_token: "{{ lookup('env', 'AAP_API_CLIENT_BEARER_TOKEN') | default(omit, true) }}"
     aap_validate_certs: "{{ (lookup('env', 'AAP_VALIDATE_CERTS') | default('false', true)) | bool }}"
 
+    eda_controller_host: "{{ aap_hostname }}"
+    eda_controller_token: "{{ aap_token }}"
+    eda_validate_certs: "{{ aap_validate_certs }}"
+
     aap_configuration_secure_logging: false
     aap_configuration_collect_logs: true
 

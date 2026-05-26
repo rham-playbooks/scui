@@ -215,7 +215,7 @@ eda_rulebook_activations:
     description: "Polls SQS for CloudTrail StopInstances events on the Warpdrive Engine and triggers remediation"
     organization: "SpaceShip"
     project: "SpaceShip Event Rules"
-    rulebook: "rulebooks/engine_failure.yml"
+    rulebook: "engine_failure.yml"
     decision_environment: "aws-sqs-de"
     eda_credentials:
       - "AAP Controller"
