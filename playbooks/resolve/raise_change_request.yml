@@ -35,12 +35,12 @@
         other:
           parent: "{{ incident_sys_id }}"
           implementation_plan: >-
-            {"job_template": "Solar Storm — Resolve",
-             "organization": "SpaceShip",
-             "extra_vars": {
-               "incident_sys_id": "{{ incident_sys_id }}",
-               "incident_number": "{{ incident_number }}"
-             }}
+            {{ {'job_template': 'Solar Storm — Resolve',
+                'organization': 'SpaceShip',
+                'extra_vars': {
+                  'incident_sys_id': incident_sys_id,
+                  'incident_number': incident_number
+                }} | to_json(ensure_ascii=False) }}
       register: snow_change
 
     - name: Show change request number
