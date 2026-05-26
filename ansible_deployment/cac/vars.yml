@@ -19,34 +19,6 @@ aap_organizations:
     description: "SpaceShip operations — EDA-driven detection and automated remediation"
 
 # -----------------------------------------------------------------------------
-# Organization Admin Users
-# -----------------------------------------------------------------------------
-aap_user_accounts:
-  - username: "break_admin"
-    password: "{{ org_admin_password }}"
-    first_name: "Break"
-    last_name: "Admin"
-    email: "break_admin@spaceship.local"
-    is_superuser: false
-    organization: "Break"
-
-  - username: "spaceship_admin"
-    password: "{{ org_admin_password }}"
-    first_name: "SpaceShip"
-    last_name: "Admin"
-    email: "spaceship_admin@spaceship.local"
-    is_superuser: false
-    organization: "SpaceShip"
-
-controller_roles:
-  - user: "break_admin"
-    organization: "Break"
-    role: "admin"
-  - user: "spaceship_admin"
-    organization: "SpaceShip"
-    role: "admin"
-
-# -----------------------------------------------------------------------------
 # Custom Credential Types
 # -----------------------------------------------------------------------------
 controller_credential_types:
