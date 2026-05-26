@@ -4,7 +4,7 @@
 
   sources:
     - amazon.aws.aws_sqs_queue:
-        queue_name: scui-engine-failure-events
+        name: scui-engine-failure-events
         region: eu-west-1
         delay_seconds: 5
 
