@@ -14,7 +14,7 @@
     aap_configuration_secure_logging: false
     aap_configuration_collect_logs: true
 
-    org_admin_password: "{{ lookup('env', 'AAP_ORG_ADMIN_PASSWORD') | default('Redhat123!', true) }}"
+    org_admin_password: "{{ lookup('env', 'AAP_ORG_ADMIN_PASSWORD') }}"
 
     aws_access_key: "{{ lookup('env', 'AWS_ACCESS_KEY_ID') | default(omit, true) }}"
     aws_secret_key: "{{ lookup('env', 'AWS_SECRET_ACCESS_KEY') | default(omit, true) }}"
