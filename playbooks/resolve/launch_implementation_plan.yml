@@ -4,7 +4,7 @@
   become: false
   gather_facts: false
   collections:
-    - awx.awx
+    - ansible.controller
   vars:
     implementation_plan: ""
   tasks:
@@ -35,7 +35,7 @@
         verbosity: 1
 
     - name: Launch job template
-      awx.awx.job_launch: # noqa no-unresolved
+      ansible.controller.job_launch: # noqa no-unresolved
         # (These can be omitted if provided via env in AAP)
         # controller_host: "{{ lookup('env','CONTROLLER_HOST') | regex_replace('/api/.*$', '') }}"
         # controller_username: "{{ lookup('env','CONTROLLER_USERNAME') | default(omit) }}"
@@ -49,7 +49,7 @@
         - skip_ansible_lint
 
     - name: Wait for job to finish
-      awx.awx.job_wait: # noqa no-unresolved
+      ansible.controller.job_wait: # noqa no-unresolved
         # controller_host/controller_* also read from env if set in AAP
         job_id: "{{ launch.id }}"
         timeout: 1800
