@@ -124,7 +124,7 @@ controller_hosts:
 # -----------------------------------------------------------------------------
 controller_credentials:
   # Break org — AWS creds to stop instances
-  - name: "AWS Credentials"
+  - name: "AWS Credentials — Break"
     description: "AWS access for EC2 operations (break scenarios)"
     organization: "Break"
     credential_type: "Amazon Web Services"
@@ -132,7 +132,7 @@ controller_credentials:
       username: "{{ aws_access_key }}"
       password: "{{ aws_secret_key }}"
 
-  - name: "SCUI API"
+  - name: "SCUI API — Break"
     description: "Token to trigger SCUI screen state changes"
     organization: "Break"
     credential_type: "SCUI API Token"
@@ -142,7 +142,7 @@ controller_credentials:
       AAP_API_CLIENT_BEARER_TOKEN: "{{ api_client_bearer_token }}"
 
   # SpaceShip org — AWS creds to start instances back up
-  - name: "AWS Credentials"
+  - name: "AWS Credentials — SpaceShip"
     description: "AWS access for EC2 operations (remediation)"
     organization: "SpaceShip"
     credential_type: "Amazon Web Services"
@@ -150,7 +150,7 @@ controller_credentials:
       username: "{{ aws_access_key }}"
       password: "{{ aws_secret_key }}"
 
-  - name: "SCUI API"
+  - name: "SCUI API — SpaceShip"
     description: "Token to trigger SCUI screen state changes"
     organization: "SpaceShip"
     credential_type: "SCUI API Token"
@@ -182,8 +182,8 @@ controller_templates:
     inventory: "Break Targets"
     ask_variables_on_launch: true
     credentials:
-      - "AWS Credentials"
-      - "SCUI API"
+      - "AWS Credentials — Break"
+      - "SCUI API — Break"
     extra_vars:
       aws_region: "{{ aws_region }}"
       instance_id: "{{ warpdrive_engine_instance_id }}"
@@ -198,8 +198,8 @@ controller_templates:
     inventory: "SpaceShip Systems"
     ask_variables_on_launch: true
     credentials:
-      - "AWS Credentials"
-      - "SCUI API"
+      - "AWS Credentials — SpaceShip"
+      - "SCUI API — SpaceShip"
     extra_vars:
       aws_region: "{{ aws_region }}"
       instance_id: "{{ warpdrive_engine_instance_id }}"
