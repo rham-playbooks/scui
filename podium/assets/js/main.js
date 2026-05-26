@@ -5,7 +5,7 @@ const HOME_VIDEO_SRC = 'assets/video/home.mp4';
 
 const SCENARIO_JOB_TEMPLATES = {
     engine_failure_init: 57,
-    solar_storm_init: 0, // TODO: set after make aap-apply
+    solar_storm_init: 59,
 };
 
 function postScenario(scenario) {
