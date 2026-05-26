@@ -28,7 +28,7 @@
               incident_number: "{{ event.number | default('') }}"
 
     - name: Raise change request after diagnostics confirm fault
-      condition: event.diagnostics_report is defined and event.icmp_blocked is defined and event.icmp_blocked == 'True'
+      condition: event.diagnostics_report is defined and event.icmp_blocked is defined and event.icmp_blocked == true
       throttle:
         once_within: 10 minutes
         group_by_attributes:
