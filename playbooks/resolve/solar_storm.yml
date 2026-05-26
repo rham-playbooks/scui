@@ -20,7 +20,7 @@
       ansible.builtin.debug:
         msg: "ICMP restored on {{ inventory_hostname }}. Ping to earth.chrislab.dev will succeed."
 
-- name: "Solar Storm: Update ServiceNow and notify SCUI"
+- name: "Solar Storm: Notify SCUI of resolution"
   hosts: localhost
   connection: local
   gather_facts: false
@@ -29,32 +29,8 @@
     scui_host: "{{ lookup('env', 'SCUI_HOST') | default('localhost:8080', true) }}"
     scui_protocol: "{{ lookup('env', 'SCUI_PROTOCOL') | default('http', true) }}"
     api_token: "{{ lookup('env', 'AAP_API_CLIENT_BEARER_TOKEN') | default('', true) }}"
-    sn_host: "{{ lookup('env', 'SN_HOST') | default(omit, true) }}"
-    sn_username: "{{ lookup('env', 'SN_USERNAME') | default(omit, true) }}"
-    sn_password: "{{ lookup('env', 'SN_PASSWORD') | default(omit, true) }}"
-    incident_sys_id: ""
-    change_sys_id: ""
 
   tasks:
-    - name: Update change request to Review
-      servicenow.itsm.change_request:
-        sys_id: "{{ change_sys_id }}"
-        state: review
-        other:
-          close_code: successful
-          close_notes: "ICMP restored on earth-comms by EDA automation."
-      when: (change_sys_id | default('')) | length > 0
-
-    - name: Resolve the incident
-      servicenow.itsm.incident:
-        sys_id: "{{ incident_sys_id }}"
-        state: resolved
-        close_code: "Solution provided"
-        close_notes: >-
-          Earth communications restored. ICMP re-enabled on earth-comms firewall.
-          Automated resolution by Ansible Automation Platform via EDA.
-      when: (incident_sys_id | default('')) | length > 0
-
     - name: Trigger SCUI resolved state
       ansible.builtin.uri:
         url: "{{ scui_protocol }}://{{ scui_host }}/api/controller/ui/home"
@@ -74,4 +50,4 @@
 
     - name: Report
       ansible.builtin.debug:
-        msg: "Earth communications restored. ServiceNow updated. SCUI notified."
+        msg: "Earth communications restored. SCUI notified."

@@ -289,6 +289,18 @@ controller_templates:
     credentials:
       - "ServiceNow — SpaceShip"
 
+  - name: "Run Implementation Plan from Change Request"
+    description: "Parses implementation_plan JSON from a change request and launches the specified job"
+    organization: "SpaceShip"
+    job_type: "run"
+    project: "SpaceShip Automation"
+    playbook: "playbooks/resolve/launch_implementation_plan.yml"
+    inventory: "SpaceShip Systems"
+    ask_variables_on_launch: true
+    credentials:
+      - "AAP Controller"
+      - "ServiceNow — SpaceShip"
+
   - name: "Solar Storm — Resolve"
     description: "Re-enable ICMP on Earth Comms, update ServiceNow, notify SCUI"
     organization: "SpaceShip"

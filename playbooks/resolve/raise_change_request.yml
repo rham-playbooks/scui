@@ -34,13 +34,13 @@
         urgency: high
         other:
           parent: "{{ incident_sys_id }}"
-          implementation_plan: |
-            1. Connect to Earth Communications Array (earth-comms)
-            2. Remove firewalld ICMP drop rule: firewall-cmd --remove-rich-rule 'rule protocol value="icmp" drop' --permanent
-            3. Reload firewalld configuration
-            4. Verify ICMP connectivity restored to earth.chrislab.dev
-            5. Update ServiceNow incident and change request
-            6. Notify SCUI display of resolution
+          implementation_plan: >-
+            {{ {'job_template': 'Solar Storm — Resolve',
+                'organization': 'SpaceShip',
+                'extra_vars': {
+                  'incident_sys_id': incident_sys_id,
+                  'incident_number': incident_number
+                }} | to_json }}
       register: snow_change
 
     - name: Show change request number
