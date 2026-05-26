@@ -49,10 +49,6 @@
         wait_timeout: 120
       register: stop_result
 
-    - name: Pause to allow observation in AWS console
-      ansible.builtin.pause:
-        seconds: 10
-
     - name: Report
       ansible.builtin.debug:
         msg: >-

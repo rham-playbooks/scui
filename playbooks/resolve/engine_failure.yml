@@ -19,6 +19,10 @@
         fail_msg: >
           WARPDRIVE_ENGINE_INSTANCE_ID is not set.
 
+    - name: Pause to allow observation in AWS console
+      ansible.builtin.pause:
+        seconds: 10
+
     - name: Start the Warpdrive Engine instance
       amazon.aws.ec2_instance:
         region: "{{ aws_region }}"
