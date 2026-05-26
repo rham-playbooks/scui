@@ -1,5 +1,5 @@
 ---
-- name: "Solar Storm: Notify SCUI and create ServiceNow tickets"
+- name: "Solar Storm: Notify SCUI and create ServiceNow incident"
   hosts: localhost
   connection: local
   gather_facts: false
@@ -12,7 +12,6 @@
     sn_username: "{{ lookup('env', 'SN_USERNAME') | default(omit, true) }}"
     sn_password: "{{ lookup('env', 'SN_PASSWORD') | default(omit, true) }}"
     sn_caller_name: "{{ lookup('env', 'SN_CALLER_NAME') | default('Event Driven Ansible', true) }}"
-    earth_comms_host: "{{ lookup('env', 'EARTH_COMMS_HOST') }}"
 
   tasks:
     - name: Trigger SCUI crisis state
@@ -40,7 +39,8 @@
         description: |
           A solar storm has disrupted communications with the Earth network.
           ICMP connectivity to earth.chrislab.dev is down.
-          Automated remediation requires a change request to be raised and approved.
+
+          EDA is monitoring this incident and will raise a change request automatically.
         impact: high
         urgency: high
         other:
@@ -49,36 +49,7 @@
 
     - name: Show incident number
       ansible.builtin.debug:
-        msg: "Incident created: {{ snow_incident.record.number }}"
-
-    - name: Create ServiceNow change request
-      servicenow.itsm.change_request:
-        state: new
-        type: emergency
-        short_description: "Restore Earth comms — re-enable ICMP on earth-comms"
-        description: |
-          Solar storm has caused network outage to Earth communications.
-          Incident: {{ snow_incident.record.number }}
-
-          Implementation: Re-enable ICMP on the earth-comms firewall.
-          When this change is moved to Implement, EDA will automatically execute the fix.
-        impact: high
-        urgency: high
-        other:
-          parent: "{{ snow_incident.record.sys_id }}"
-      register: snow_change
-
-    - name: Show change request number
-      ansible.builtin.debug:
-        msg: "Change request created: {{ snow_change.record.number }}"
-
-    - name: Update incident with change request reference
-      servicenow.itsm.incident:
-        sys_id: "{{ snow_incident.record.sys_id }}"
-        other:
-          work_notes: >-
-            Change request {{ snow_change.record.number }} has been raised.
-            Awaiting approval — EDA is monitoring for Implement state.
+        msg: "Incident created: {{ snow_incident.record.number }}. EDA will detect this and raise a change request."
 
 - name: "Solar Storm: Block ICMP on Earth Comms"
   hosts: earth_comms

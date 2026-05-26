@@ -1,0 +1,49 @@
+---
+- name: "Solar Storm: Raise change request from incident"
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    sn_host: "{{ lookup('env', 'SN_HOST') | default(omit, true) }}"
+    sn_username: "{{ lookup('env', 'SN_USERNAME') | default(omit, true) }}"
+    sn_password: "{{ lookup('env', 'SN_PASSWORD') | default(omit, true) }}"
+    incident_sys_id: ""
+    incident_number: ""
+    incident_short_description: ""
+
+  tasks:
+    - name: Validate incident sys_id
+      ansible.builtin.assert:
+        that:
+          - (incident_sys_id | default('')) | length > 0
+        fail_msg: "incident_sys_id is required"
+
+    - name: Create change request linked to incident
+      servicenow.itsm.change_request:
+        state: new
+        type: emergency
+        short_description: "Restore Earth comms — re-enable ICMP on earth-comms"
+        description: |
+          Automated change request raised by EDA in response to incident {{ incident_number }}.
+          {{ incident_short_description }}
+
+          Implementation: Re-enable ICMP on the earth-comms firewall.
+          When this change is moved to Implement, EDA will automatically execute the fix.
+        impact: high
+        urgency: high
+        other:
+          parent: "{{ incident_sys_id }}"
+      register: snow_change
+
+    - name: Show change request number
+      ansible.builtin.debug:
+        msg: "Change request created: {{ snow_change.record.number }}"
+
+    - name: Update incident with change request reference
+      servicenow.itsm.incident:
+        sys_id: "{{ incident_sys_id }}"
+        other:
+          work_notes: >-
+            EDA has detected this incident and raised change request {{ snow_change.record.number }}.
+            Awaiting approval — move the change to Implement to trigger automated resolution.

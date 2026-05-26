@@ -266,6 +266,29 @@ controller_templates:
       aws_region: "{{ aws_region }}"
       instance_id: "{{ warpdrive_engine_instance_id }}"
 
+  - name: "Solar Storm — Diagnose Earth Comms"
+    description: "EDA runs diagnostics on Earth Communications Array and updates the incident"
+    organization: "SpaceShip"
+    job_type: "run"
+    project: "SpaceShip Automation"
+    playbook: "playbooks/resolve/diagnose_earth_comms.yml"
+    inventory: "SpaceShip Systems"
+    ask_variables_on_launch: true
+    credentials:
+      - "SSH Key — SpaceShip"
+      - "ServiceNow — SpaceShip"
+
+  - name: "Solar Storm — Raise Change Request"
+    description: "EDA creates a change request after diagnostics confirm fault"
+    organization: "SpaceShip"
+    job_type: "run"
+    project: "SpaceShip Automation"
+    playbook: "playbooks/resolve/raise_change_request.yml"
+    inventory: "SpaceShip Systems"
+    ask_variables_on_launch: true
+    credentials:
+      - "ServiceNow — SpaceShip"
+
   - name: "Solar Storm — Resolve"
     description: "Re-enable ICMP on Earth Comms, update ServiceNow, notify SCUI"
     organization: "SpaceShip"
@@ -389,6 +412,17 @@ eda_rulebook_activations:
     eda_credentials:
       - "AAP Controller"
       - "AWS SQS Access"
+    enabled: true
+
+  - name: "Earth Comms Incident Monitor"
+    description: "Polls ServiceNow incident table and raises change requests for solar storm incidents"
+    organization: "SpaceShip"
+    project: "SpaceShip Event Rules"
+    rulebook: "snow_incidents.yml"
+    decision_environment: "snow-de"
+    eda_credentials:
+      - "AAP Controller"
+      - "ServiceNow EDA"
     enabled: true
 
   - name: "Earth Comms Change Monitor"

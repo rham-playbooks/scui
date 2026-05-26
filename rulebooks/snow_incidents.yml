@@ -1,93 +1,44 @@
 ---
-- name: Monitor incidents in ServiceNow
+- name: Monitor ServiceNow incidents — diagnose and raise change requests
   hosts: all
-  execution_strategy: parallel
   sources:
     - servicenow.itsm.records:
         table: incident
         interval: 10
-        # Filter ONLY by assignment group; newest first to avoid the “oldest page first” trap
         sysparm_query: >
-          assignment_group=91b12d5b53c72610a33138f0a0490e52^
           ORDERBYDESCsys_updated_on^ORDERBYDESCsys_id
-      filters:
-        - ansible.eda.json_filter:
-        - ansible.eda.normalize_keys:
+        filters:
+          - ansible.eda.json_filter:
+          - ansible.eda.normalize_keys:
   rules:
-
-    # 1) Enrich incoming incidents with CMDB environment based on cmdb_ci. This is because there is no environment field in the incident table.
-    - name: Enrich incident with CMDB and diagnostics data
-      condition: "event.meta is defined and event.environment is not defined"
+    - name: Run diagnostics on Earth Communications Array
+      condition: event.state is defined and event.state == '1' and event.diagnostics_report is not defined
       throttle:
         once_within: 10 minutes
         group_by_attributes:
           - sys_id
       action:
         run_job_template:
-          name: Enrich incident with CMDB and diagnostics data
-          organization: SC-2025
+          name: "Solar Storm — Diagnose Earth Comms"
+          organization: SpaceShip
           post_events: true
           job_args:
             extra_vars:
-              cmdb_ci: "{{ event.cmdb_ci| default('') }}"
-
-    # 2) Handle non-production incidents
-    - name: Handle non-production incident
-      condition: event.environment is defined and event.environment != "Production"
-      action:
-        run_workflow_template:
-          name: non_prod_servicenow_auto_remediate_selinux_workflow
-          organization: SC-2025
-          job_args:
-            extra_vars:
-              target_host: "{{ event.target_host }}"
-              environment: "{{ event.environment }}"
-              incident_sys_id: "{{ event.sys_id }}"
-              success_update: |
-                ########### EDA REMEDIATION STATUS UPDATE - SUCCESS #############
-              fail_update: |
-                ########### EDA REMEDIATION STATUS UPDATE - FAIL #############
-              work_notes: |
-                ########### EDA REMEDIATION STATUS UPDATE - Attempting remediation in {{ event.environment }} environment #############
-
-    # 3) Handle production incidents
-    - name: Handle production incident
-      condition: >
-        event.environment is defined and event.environment == "Production"
-        and event.diagnostics_structured.nginx_config_error is match(".*unknown directive.*", ignorecase=true)
-      action:
-        run_workflow_template:
-          name: Create Change and Update Incident
-          organization: SC-2025
-          job_args:
-            extra_vars:
-              # Change Request fields
-              change_short_description: "Emergency change: Nginx issue on {{ event.target_host | default('unknown host') }}"
-              change_description: |
-                Automated emergency change created by EDA.
-                Incident: {{ event.incident_number | default('unknown') }}
-                Host: {{ event.target_host | default('unknown host') }}
-                Environment: {{ event.environment | default('unknown') }}
-                Diagnostics report: {{ event.diagnostics_report | default('') }}
-
-                When the change is approved, the nginx config will be replaced with the last working version.
-              change_impact: high
-              change_urgency: high
-              change_assignment_group: "Event Driven Ansible"
-              implementation_job_template_name: "Remediate Nginx Config"
-              change_justification: "{{ event.diagnostics_structured.nginx_config_error | default('') }}"
-
-              # Incident fields for the playbook's pre-change incident
-              success_update: |
-                ########### EDA REMEDIATION STATUS UPDATE - SUCCESS #############
-              fail_update: |
-                  ########### EDA REMEDIATION STATUS UPDATE - FAIL #############
-              work_notes: |
-                EDA REMEDIATION STATUS UPDATE - Production incident - Approval Required - Change Request Raised
-
-              # Correlation to link incident and change
-              alert_fingerprint: "{{ event.correlation_id | default('') }}"
-              # Pass-through context for remediation
-              target_host: "{{ event.target_host | default('') }}"
-              environment: "{{ event.environment | default('') }}"
               incident_sys_id: "{{ event.sys_id | default('') }}"
+              incident_number: "{{ event.number | default('') }}"
+
+    - name: Raise change request after diagnostics confirm fault
+      condition: event.diagnostics_report is defined and event.icmp_blocked is defined and event.icmp_blocked == 'True'
+      throttle:
+        once_within: 10 minutes
+        group_by_attributes:
+          - incident_sys_id
+      action:
+        run_job_template:
+          name: "Solar Storm — Raise Change Request"
+          organization: SpaceShip
+          job_args:
+            extra_vars:
+              incident_sys_id: "{{ event.incident_sys_id | default('') }}"
+              incident_number: "{{ event.incident_number | default('') }}"
+              diagnostics_report: "{{ event.diagnostics_report | default('') }}"

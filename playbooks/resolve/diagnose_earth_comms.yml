@@ -1,0 +1,90 @@
+---
+- name: "Solar Storm: Run diagnostics on Earth Communications Array"
+  hosts: earth_comms
+  become: true
+  gather_facts: true
+
+  tasks:
+    - name: Check subspace relay interface status
+      ansible.builtin.shell: ip -br link show eth0
+      register: interface_status
+      changed_when: false
+
+    - name: Scan communications firewall configuration
+      ansible.builtin.shell: firewall-cmd --list-rich-rules
+      register: firewall_rules
+      changed_when: false
+      failed_when: false
+
+    - name: Test outbound signal to Earth relay (ping 8.8.8.8)
+      ansible.builtin.shell: ping -c 2 -W 2 8.8.8.8
+      register: outbound_ping
+      changed_when: false
+      failed_when: false
+
+    - name: Analyse communications array diagnostics
+      ansible.builtin.set_fact:
+        icmp_blocked: "{{ 'icmp' in (firewall_rules.stdout | default('')) and 'drop' in (firewall_rules.stdout | default('')) }}"
+        interface_up: "{{ 'UP' in (interface_status.stdout | default('')) }}"
+        outbound_ok: "{{ outbound_ping.rc == 0 }}"
+
+    - name: Build diagnostic report
+      ansible.builtin.set_fact:
+        diagnostics_report: |
+          ====== EARTH COMMUNICATIONS ARRAY — DIAGNOSTIC REPORT ======
+          Host:              {{ inventory_hostname }} ({{ ansible_host }})
+          Timestamp:         {{ ansible_date_time.iso8601 }}
+
+          [SUBSYSTEM: Network Interface]
+            Status:          {{ 'ONLINE' if interface_up else 'OFFLINE' }}
+            Interface:       {{ interface_status.stdout | default('unknown') }}
+
+          [SUBSYSTEM: Communications Firewall]
+            ICMP Blocked:    {{ 'YES — FAULT DETECTED' if icmp_blocked else 'No' }}
+            Active Rules:    {{ firewall_rules.stdout | default('none') }}
+
+          [SUBSYSTEM: Outbound Signal]
+            Earth Relay:     {{ 'REACHABLE' if outbound_ok else 'UNREACHABLE' }}
+
+          [DIAGNOSIS]
+          {% if icmp_blocked %}
+            CRITICAL: Firewall rule is dropping all ICMP traffic.
+            A solar storm has corrupted the communications firewall.
+            Recommended action: Remove the ICMP drop rule to restore connectivity.
+          {% else %}
+            All subsystems nominal. No faults detected.
+          {% endif %}
+          ==============================================================
+
+- name: "Solar Storm: Update incident with diagnostics and report to EDA"
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    sn_host: "{{ lookup('env', 'SN_HOST') | default(omit, true) }}"
+    sn_username: "{{ lookup('env', 'SN_USERNAME') | default(omit, true) }}"
+    sn_password: "{{ lookup('env', 'SN_PASSWORD') | default(omit, true) }}"
+    incident_sys_id: ""
+    incident_number: ""
+
+  tasks:
+    - name: Collect diagnostics from earth_comms host
+      ansible.builtin.set_fact:
+        report: "{{ hostvars['earth_comms']['diagnostics_report'] }}"
+        icmp_blocked: "{{ hostvars['earth_comms']['icmp_blocked'] }}"
+
+    - name: Update incident with diagnostic findings
+      servicenow.itsm.incident:
+        sys_id: "{{ incident_sys_id }}"
+        other:
+          work_notes: "{{ report }}"
+
+    - name: Report diagnostics back to EDA rulebook
+      ansible.builtin.set_stats:
+        data:
+          incident_sys_id: "{{ incident_sys_id }}"
+          incident_number: "{{ incident_number }}"
+          icmp_blocked: "{{ icmp_blocked }}"
+          diagnostics_report: "{{ report }}"
+        aggregate: false
