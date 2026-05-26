@@ -40,6 +40,15 @@
       ansible.builtin.debug:
         msg: "Change request created: {{ snow_change.record.number }}"
 
+    - name: Move change to Authorize and request approval
+      servicenow.itsm.change_request:
+        number: "{{ snow_change.record.number }}"
+        state: authorize
+        other:
+          approval: requested
+      tags:
+        - skip_ansible_lint
+
     - name: Update incident with change request reference
       servicenow.itsm.incident:
         sys_id: "{{ incident_sys_id }}"
